@@ -1,7 +1,7 @@
 import os
 
-inputFile  = 'a_input.txt'
-outputFile = '10.9 Constructing Initial Object State.md'
+inputFile  = 'input.txt'
+outputFile = '11.2 Generic Types and Parameterized Types.md'
 outputFile = outputFile.replace(" ", "_").lower()  # replaces space with underscore and lowercases filename
 
 new_text = ""
@@ -21,7 +21,7 @@ with open(inputFile, 'r', encoding="utf-8") as f:
             and data[i] == "."
             and i + 1 < len(data)
             and not (
-                data[i + 1:i + 3] == "rs"  # Exclude ".rs"
+                data[i + 1:i + 3] == "java"  # Exclude ".rs"
                 or data[i - 1].isdigit()
                 or data[i + 1].isdigit()
             )
