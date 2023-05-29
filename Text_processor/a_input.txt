@@ -1,0 +1,103 @@
+10.9 Constructing Initial Object State
+Object initialization involves constructing the initial state of an object when it is created by the new operator. First the fields are initialized to their default values (§3.4, p.103)—whether they are subsequently given non-default initial values or not—and then the constructor is invoked. This can lead to local chaining of constructors. The invocation of the constructor at the end of the local chain of constructor invocations results in the following actions, before the constructor’s execution resumes:
+Implicit or explicit invocation of the superclass constructor. Constructor chaining ensures that the state from the object’s superclasses is constructed first (§5.3, p.209).
+Initialization of the instance fields by executing their instance initializer expressions and any instance initializer blocks, in the order they are specified in the class declaration.
+Example 10.9 illustrates object initialization. The new operator is used at (8) to create an object of SubclassB. The no-argument constructor SubclassB() at (2) uses the this() construct to locally chain to the non-zero argument constructor at (3). This constructor then leads to an implicit call of the superclass constructor. As can be seen from the program output, the execution of the superclass’s constructor at (1) reaches completion first. This is followed by the execution of the instance initializer block at (4) and the instance initializer expression at (6). Then the execution of the body of the non-zero argument constructor at (3) resumes. Finally, the no-argument constructor completes its execution, thereby completing the construction of the object state.
+Note that the instance initializers are executed in the order they are specified in the class declaration. The forward reference to the field value at (5) is legal because the usage of the field value is on the left-hand side of the assignment (it does not violate the declaration-before-reading rule). The default value of the field value is overwritten by the instance initializer block at (5). The field value is again overwritten by the instance initializer expression at (6), and finally by the non-zero argument constructor at (3).
+Example 10.9 Object State Construction
+
+Click here to view code image
+// File: ObjectConstruction.java
+class SuperclassA {
+  public SuperclassA() {                     // (1) Superclass constructor
+    System.out.println("Constructor in SuperclassA");
+  }
+}
+//_______________________________________________________________________________
+class SubclassB extends SuperclassA {
+
+  SubclassB() {                              // (2) No-argument constructor
+    this(3);
+    System.out.println("No-argument constructor in SubclassB");
+  }
+
+  SubclassB(int i) {                         // (3) Non-zero argument constructor
+    System.out.println("Non-zero argument constructor in SubclassB");
+    value = i;
+  }
+
+  {                                          // (4) Instance initializer block
+    System.out.println("Instance initializer block in SubclassB");
+    value = 2;                               // (5)
+  }
+
+  int value = initializerExpression();       // (6) Instance field declaration
+
+  private int initializerExpression() {      // (7)
+    System.out.println("Instance initializer expression in SubclassB");
+    return 1;
+  }
+}
+//_______________________________________________________________________________
+public class ObjectConstruction {
+  public static void main(String[] args) {
+    SubclassB objRef = new SubclassB();         // (8)
+    System.out.println("value: " + objRef.value);
+  }
+}
+Output from the program:
+Click here to view code image
+Constructor in SuperclassA
+Instance initializer block in SubclassB
+Instance initializer expression in SubclassB
+Non-zero argument constructor in SubclassB
+No-argument constructor in SubclassB
+value: 3
+Some care should be exercised when writing constructors for non-final classes, since the object that is constructed might be a subclass instance. Example 10.10 shows a situation where use of overridden methods in superclass initializers and constructors can give unexpected results. The example intentionally uses the this reference to underline that the instance methods and constructors are invoked on the current object, and that the constructor call results in the initialization of the object state, as expected.
+The program output from Example 10.10 shows that the field superValue at (1) in SuperclassA never gets initialized explicitly when an object of SubclassB is created at (8). The SuperclassA constructor at (2) does have a call to a method that has the name doValue at (3). A method with such a name is defined in SuperclassA at (4), but is also overridden in SubclassB at (7). The program output indicates that the method doValue() from SubclassB is called at (3) in the SuperclassA constructor. The implementation of the method doValue() at (4) never gets executed when an object of SubclassB is created. Method invocation always determines the implementation of the method to be executed, based on the actual type of the object. Keeping in mind that it is an object of SubclassB that is being initialized, the call to the method named doValue at (3) results in the method from SubclassB being executed. This can lead to unintended results. The overriding method doValue() at (7) in SubclassB can access the field value declared at (5) before its initializer expression has been executed; thus the method invoked can access the state of the object before this has been completely initialized. The value 0 is then printed, as the field value has not yet been initialized with the value 800 when the superclass constructor is executed.
+Class initialization takes place before any instance of the class can be created or a static method of the class can be invoked. A superclass is initialized before its subclasses are initialized. Initializing a class involves initialization of the static fields by executing their static initializer expressions and any static initializer blocks.
+Initialization of an interface involves execution of any static initializer expressions for the public static final fields declared in the interface. An interface cannot specify instance initializer expressions because it has no instance fields, nor can it specify any initializer blocks because it cannot be instantiated.
+Example 10.10 Initialization Anomaly under Object State Construction
+
+Click here to view code image
+// File: ObjectInitialization.java
+class SuperclassA {
+  protected int superValue;                              // (1)
+  SuperclassA() {                                        // (2)
+    System.out.println("Constructor in SuperclassA");
+    this.doValue();                                      // (3)
+  }
+  void doValue() {                                       // (4)
+    this.superValue = 911;
+    System.out.println("superValue (from SuperclassA): " + this.superValue);
+  }
+}
+//_______________________________________________________________________________
+class SubclassB extends SuperclassA {
+  private int value = 800;                               // (5)
+  SubclassB() {                                          // (6)
+    System.out.println("Constructor in SubclassB");
+    this.doValue();
+    System.out.println("superValue (from SuperclassA): " + this.superValue);
+  }
+  @Override
+  void doValue() {                                       // (7)
+    System.out.println("value (from SubclassB): " + this.value);
+  }
+}
+//_______________________________________________________________________________
+public class ObjectInitialization {
+  public static void main(String[] args) {
+
+    System.out.println("Creating an object of SubclassB.");
+    new SubclassB();                                     // (8)
+  }
+}
+Output from the program:
+Click here to view code image
+Creating an object of SubclassB.
+Constructor in SuperclassA
+value (from SubclassB): 0
+Constructor in SubclassB
+value (from SubclassB): 800
+superValue (from SuperclassA): 0
