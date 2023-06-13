@@ -8,7 +8,7 @@ import java.util.Deque;
 public class Main {
     public static void main(String[] args) {
         String inputFile = "input.txt";
-        String outputFile = "11.1. How to Write Tests.md";
+        String outputFile = "11.5 Using References of Wildcard Parameterized Types.md";
         String textToBeReplaced = "Click here to view code image";
         outputFile = formatOutputFileName(outputFile);
 
@@ -54,8 +54,8 @@ public class Main {
 
         data = deleteEntireline(data, textToBeReplaced);
 
-        // process a dot sign followed by a space that is not followed by a valid
-        // character, number, or lowercase letter
+        // process a dot sign followed by a space that is 
+        // not followed by a valid character, number, or lowercase letter
         data = data.replaceAll("\\. (?![a-z0-9])", ".\n");
 
         boolean insideBraces = false;
