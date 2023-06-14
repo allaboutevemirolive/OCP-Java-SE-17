@@ -54,8 +54,7 @@ public class Main {
 
         data = deleteEntireline(data, textToBeReplaced);
 
-        // process a dot sign followed by a space that is 
-        // not followed by a valid character, number, or lowercase letter
+        // process a dot sign followed by a space that is not followed by a valid character, number, or lowercase letter
         data = data.replaceAll("\\. (?![a-z0-9])", ".\n");
 
         boolean insideBraces = false;
