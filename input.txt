@@ -1,256 +1,195 @@
-11.5 Using References of Wildcard Parameterized Types
-A wildcard type can be used to declare parameterized references—that is, references whose type is a wildcard parameterized type. In this section, we look at how such references are used in the following contexts:
+11.7 Generic Methods and Constructors
+We first look at how generic methods and constructors are declared, and then at how they can be called—both with and without explicit actual type parameters.
 
-Assignment between such references
+Declaring Generic Methods
 
-Calling methods of generic types using such references
+A generic method (also called polymorphic method) is implemented like an ordinary method, except that one or more formal type parameters are specified immediately preceding the return type. In the case of a generic constructor, the formal parameters are specified before the class name in the constructor header. Much of what applies to generic methods in this regard also applies to generic constructors.
 
-The generic class Node<E> used in this subsection is defined in Example 11.2, p. 568.
-
-Generic Reference Assignment
-
-A reference of a supertype can refer to an object of a subtype, and this substitution principle applies to parameterized types as well. Assignment compatibility is according to the type hierarchy of the parameterized types. Figure 11.5 shows partial type hierarchy for selected parameterized types of the generic class Node<E>. It combines the type hierarchies from Figure 11.3 and Figure 11.4. As we would expect, widening reference conversions according to the type hierarchy are always type-safe. All but the last assignment statement in the code below are legal. The types Node<Number> and Node<Integer> are unrelated. (The notation B <: A means B is a subtype of A.)
+Example 11.9 Declaring Generic Methods
 
 Click here to view code image
 
-Node<Object>  objNode = new Node<Object>(100, null);
-Node<Number>  numNode = new Node<Number>(200, null);
-Node<Integer> intNode = new Node<Integer>(300, null);
-Node<? extends Number> extNumNode
-                       = intNode; // Node<Integer> <: Node<? extends Number>
-Node<? super Integer>  supIntNode
-                       = numNode; // Node<Number> <: Node<? super Integer>
-supIntNode = objNode;             // Node<Object> <: Node<? super Integer>
-numNode    = intNode;             // Compile-time error! Types unrelated.
-In the code below, we get an error at (1) because the types Node<? extends Number> and Node<? super Number> are unrelated, but that is not the case for the types Node<? extends Object> and Node<? super Object> at (2). The family of types denoted by the type Node<? super Object> has the subtype Node<Object> only, which is also a subtype of the type Node<? extends Object>. In the assignment at (3), the type Node<? extends Object> is not a subtype of the type Node<? super Object>, but the converse is true as established at (2).
+public class Utilities {
 
-Click here to view code image
+  // The key type and the array element type can be any type.
+  static boolean containsV1(Object key, Object[] array) { // (1) Non-generic
+                                                          //     version
+    for (Object element : array)
+      if (key.equals(element)) return true;
+    return false;
+  }
 
-Node<? super Number>   supNumNode;
-Node<? extends Object> extObjNode;
-Node<? super Object>   supObjNode;
-extNumNode = supNumNode;  // (1) Compile-time error! Types unrelated.
-extObjNode = supObjNode;  // (2) Node<? super Object> <: Node<? extends Object>
-supObjNode = extObjNode;  // (3) Compile-time error!
-Narrowing reference conversion requires an explicit cast, except for the cases noted below (see also Figure 11.5). The raw type Node and the unbounded wildcard parameterized type Node<?> are essentially equivalent in this regard. Conversion between the two is type-safe:
+  // The key type and the array element type are the same.
+  static <E> boolean containsV2(E key, E[] array) {       // (2) Generic version
+    for (E element : array)
+      if (key.equals(element)) return true;
+    return false;
+  }
 
-Click here to view code image
-
-Node    rawNode;
-Node<?> anyNode;
-rawNode = anyNode;  // Node <-- Node<?> is type-safe.
-anyNode = rawNode;  // Node<?> <-- Node is type-safe.
-The unbounded wildcard parameterized type Node<?> and the upper bounded wildcard parameterized type Node<? extends Object> are also essentially equivalent (see (4)), except when assigned a value of the raw type Node (see (5)).
-
-Click here to view code image
-
-// (4):
-anyNode = extObjNode;  // Node<?> <-- Node<? extends Object> is type-safe.
-extObjNode = anyNode;  // Node<? extends Object> <-- Node<?> is type-safe.
-
-// (5):
-anyNode    = rawNode;  // Node<?> <-- Node is type-safe.
-extObjNode = rawNode;  // Node<? extends Object> <-- Node: Unchecked Conversion
-Assigning a value of the raw type Node to a reference of the type Node<? extends Object> results in an unchecked conversion warning—which conforms to the general rule when mixing legacy and generic code: Assigning the value of a raw type to a reference of a bounded wildcard parameterized type or a concrete parameterized type results in an unchecked conversion warning, as illustrated by the examples below.
-
-Click here to view code image
-
-extNumNode = rawNode; // Node<? extends Number> <-- Node: Unchecked Conversion
-intNode    = rawNode; // Node<Integer> <-- Node: Unchecked Conversion
-For a discussion of explicit casting of parameterized references, see §11.13, p. 625. Suppressing different kinds of unchecked warnings with the @SuppressWarnings("unchecked") annotation is discussed in §11.13, p. 623, and §25.5, p. 1582.
-
-Using Parameterized References to Call Set and Get Methods
-
-Generic classes are suitable for implementing ADTs called collections (also called containers) where the element type is usually specified by a type parameter. The Java Collections Framework is a prime example of such collections. A collection usually provides two basic operations: a set operation (also called a write or put operation) to add an element to the collection, and a get operation (also called a read operation) to retrieve an element from the collection. The set operation takes a parameter of the type T, where T is a type parameter of the generic class. The get operation returns a value of the type parameter T. The class Node<E> provides these two basic operations to manipulate the data in a node:
-
-Click here to view code image
-
-class Node<E> {
-  private E data;
-  // ...
-  public void setData(E obj) { data = obj; }        // (1) Set operation.
-  public E    getData()      { return data; }       // (2) Get operation.
-  // ...
-}
-So far we have called these two methods using references of concrete parameterized types:
-
-Click here to view code image
-
-Node<Number> numNode = new Node<>(2020, null);
-numNode.setData(2021);                      // (3) Can only set a Number.
-Number data = numNode.getData();            // (4) Can only get a Number.
-The actual type parameter in the above method calls is a concrete type, but what happens when we use a reference of a wildcard parameterized type that represents a family of types? For example, what if the type of the reference numNode is Node<? extends Number>? Is the method call at (3) type-safe? Is the assignment at (4) type-safe? Operations that can potentially break the type-safety are flagged as either compile-time errors or warnings. If there are warnings but no errors, the program still compiles. However, type-safety at runtime is not guaranteed.
-
-The key to using generics in Java is understanding the implications of wildcard parameterized types in the language—and why the compiler will not permit certain operations involving wildcards, since these might break the type-safety of the program. To illustrate some of the subtleties, we compile the class in Example 11.7 successively with different headers for the method checkIt(). The parameter type is different in each method header, from (h1) to (h5). The method uses three local variables object, number, and integer of type Object, Number, and Integer, respectively ((v1) to (v3)). There are three calls to the setData() method of the generic class Node<E> to set an Object, a Number, and an Integer as the data in the node referenced by the reference s0 ((s1) to (s3)). There are also three calls to the getData() method of the generic class Node<E>, assigning the return value to each of the local variables ((s4) to (s6)). And finally, the last statement, (s7), tests whether the data retrieved can be put back in again.
-
-Example 11.7 Illustrating Get and Set Operations Using Parameterized References
-
-Click here to view code image
-
-class WildcardAccessRestrictions {
-
-  static void checkIt(Node s0) {                    // (h1)
-//static void checkIt(Node<?> s0) {                 // (h2)
-//static void checkIt(Node<? extends Number> s0) {  // (h3)
-//static void checkIt(Node<? super Number> s0) {    // (h4)
-//static void checkIt(Node<Number> s0) {            // (h5)
-    // Local variables
-    Object  object  = new Object();                 // (v1)
-    Number  number  = 1.5;                          // (v2)
-    Integer integer = 10;                           // (v3)
-    // Method calls
-    s0.setData(object);                             // (s1)
-    s0.setData(number);                             // (s2)
-    s0.setData(integer);                            // (s3)
-    object  = s0.getData();                         // (s4)
-    number  = s0.getData();                         // (s5)
-    integer = s0.getData();                         // (s6)
-    s0.setData(s0.getData());                       // (s7)
+  // The key type is a subtype of the array element type.
+  static <K extends E, E> boolean containsV3(K key, E[] array) {  // (3)
+    for (E element : array)
+      if (key.equals(element)) return true;
+    return false;
   }
 }
-Attempts to compile the method in Example 11.7 with different headers are shown in Table 11.2. The rows are statements from (s1) to (s7) from Example 11.7. The columns indicate the type of the parameter s0 in the method headers (h1) to (h5). The reference s0 is used to call the methods. The entry ok means the compiler did not report any errors or any unchecked warnings. The entry ! means the compiler did not report any errors but issued an unchecked call warning. The entry × means the compiler reported an error. In other words, we cannot carry out the operations that are marked with the entry ×.
-
-Table 11.2 Get and Set Operations Using Parameterized References
-Type of s0
-Node
-Node<?>
-Node<? extends Number>
-Node<? super Number>
-Node<Number>
-Operation
-s0.setData(object);
-!
-×
-×
-×
-×
-s0.setData(number);
-!
-×
-×
-ok
-ok
-s0.setData(integer);
-!
-×
-×
-ok
-ok
-object = s0.getData();
-ok
-ok
-ok
-ok
-ok
-number = s0.getData();
-×
-×
-ok
-×
-ok
-integer = s0.getData();
-×
-×
-×
-×
-×
-s0.setData(s0.get-Data());
-!
-×
-×
-×
-ok
-Raw Type References
-
-The type of the reference s0 is the raw type Node. This case illustrates the non-generic paradigm of using a collection: We can put any object, but we can only get an Object. From Table 11.2, we see that we can put any object as data in a node of the raw type Node, but the compiler issues unchecked call warnings, as we are putting an object into a raw type node whose element type is not known. We can only get an Object, as we cannot be more specific about the data type.
-
-Unbounded Wildcard References: <?>
-
-The type of the reference s0 is Node<?>. The compiler determines that the actual type parameter for each method call is the wildcard ?—that is, any type. Obviously, we cannot set any data in a node whose element type cannot be determined. It might not be type-safe. And we cannot guarantee the type of its data either because the data type can be of any type, but we can safely read it as an Object. Note that we can always write a null, as the null value can be assigned to any reference.
-
-Typical use of unbounded wildcard reference is in writing methods that treat the objects in a container as of type Object and make use of Object methods for their operation. The method below can print the data in any sequence of nodes, given the start node. The specific type of the data in the node is immaterial. Note also that the method is not dependent on any type parameter.
+In Example 11.9, the method containsV1() at (1) is a non-generic method to determine the membership of an arbitrary key in an arbitrary array of objects.
 
 Click here to view code image
 
-void printNodeDataSequence(Node<?> s0) {       // Unbounded parameterized type
-  Node<?> next = s0.getNext();                 // Returns node as Node<Object>
-  while (next != null) {
-    Object obj = next.getData();               // Object reference.
-    System.out.println(obj.toString());        // Call Object method
-    next = next.getNext();
-  }
+static boolean containsV1(Object key, Object[] array) { // (1) Non-generic version
+  // ...
 }
-Upper Bounded Wildcard References: <? extends Type>
-
-The type of the reference s0 is Node<? extends Number>, where Type is Number. This means that the reference s0 refers to a node containing an object whose type is either Number or a subtype of Number, but the specific (sub)type of the object cannot always be determined at compile time. Putting any object, except a null, into such a node might not be type-safe.
-
-The code below shows what would happen if any object was allowed to be set as data in a Long node via its alias s0. If (1), (2), or (3) were allowed, we would get a ClassCastException at (4) because the data could not be assigned to a Long reference, as the type-safety of the node longNode will have been compromised, either with a supertype object or an object of an unrelated type.
+The method declaration at (1) is too general, in the sense that it does not express any relationship between the key and the array. This kind of type dependency between parameters can be achieved by using generic methods. In Example 11.9, the method containsV2() at (2) is a generic method to determine the membership of a key of type E in an array of type E. The type Object at (1) has been replaced by the type parameter E at (2), with the formal type parameter E being specified before the return type, in the same way as for a generic type.
 
 Click here to view code image
 
-Long longInt = 20L;
-Node<Long> longNode = new Node<>(longInt, null);  // Node of Long, that is
-Node<? extends Number> s0 = longNode;// referenced by a Node<? extends Number> ref.
-s0.setData(object);                  // If this was allowed, or             (1)
-s0.setData(number);                  // if this was allowed, or             (2)
-s0.setData(integer);                 // if this was allowed,                (3)
-longInt = longNode.getData();        // we would get an exception here.     (4)
-The following method call will also not compile, as the compiler cannot give any guarantees at compile time that the reference s0 will refer to a node of Long at runtime:
+static <E> boolean containsV2(E key, E[] array) {       // (2) Generic version
+  // ...
+}
+As with the generic types, a formal type parameter can have a bound, which is a type (i.e., not a type parameter). A formal type parameter can be used in the return type, in the formal parameter list, and in the method body. It can also be used to specify bounds in the formal type parameter list.
+
+A generic method need not be declared in a generic type. If declared in a generic type, a generic instance method can also use the type parameters of the generic type as any other non-generic instance methods of the generic type. In contrast, a generic static method can only use the type parameters declared in its method header.
+
+Calling Generic Methods
+
+Consider the following class declaration:
 
 Click here to view code image
 
-s0.setData(longInt);                 // Compile-time error!
-The upper bound in the wildcard type ? extends Number is Number. Therefore, the data of the node with the wildcard type ? extends Number must be a Number (i.e., either an object of type Number or an object of a subtype of Number). Thus we can only safely assign the reference value returned by the get operation to a reference of type Number or a supertype of Number.
+public class ClassDecl {
+  static <E_1,..., E_k> void genericMethod(P_1 p_1,..., P_m p_m) { ... }
+  // ...
+}
+Note that in the method declaration above, a type P_i may or may not be from the list of type parameters E_1, ..., E_k. We can call the method in various ways. One main difference from calling a non-generic method is that the actual type parameters can be specified before the method name in the call to a generic method. In the method calls shown below, <A_1,..., A_k> are the actual type parameters and (a_1,..., a_m) are the actual arguments. The specification <A_1,..., A_k> of the actual type parameters is known as a type witness, as it corroborates the types to use in the method call. If included, it must be specified in its entirety. If there is not type witness, then the compiler infers the actual type parameters.
 
-Lower Bounded Wildcard References: <? super Type>
-
-Using a reference of type Node<? super Number>, where Type is Number, we can only put a Number or a subtype object of Number into the node, as such a number would also be a subtype object of any supertype of Number. Since we cannot guarantee which specific supertype of Number the node actually has, we cannot put any supertype object of Number in the node. The code below shows what would happen if an unrelated supertype object was put in as data in a Node<? super Number>. If (1) were allowed, we would get a ClassCastException at (2) because the data value (of a supertype) cannot be assigned to a Number reference (which is a subtype).
-
-Click here to view code image
-
-Node<Number> numNode = new Node<>(2020, null);
-Node<? super Number> s0 = numNode;
-s0.setData(object);             // (1) If this set operation was allowed,
-number = numNode.getData();     // (2) we would get an exception here.
-Since the type of the reference s0 is Node<? super Number>, the reference s0 can refer to a node containing an object whose type is either Number or some supertype of Number. When we get the data from such a node, we can only safely assume that it is an Object. Keeping in mind that a reference of a supertype of Number can refer to objects that are unrelated to Number (e.g., an Object reference that can refer to a String), if (3) were allowed in the code below, we would get a ClassCastException at (3):
+The following method calls can occur in any static or non-static context where the class CallDecl is accessible:
 
 Click here to view code image
 
-Node<Object> objNode = new Node<>("Hi", null);  // String as data.
-Node<? super Number> s0 = objNode;
-number = s0.getData();        // (3) If allowed, we would get an exception here.
-object = s0.getData();        // This is always ok.
-Unbounded Type References: <Type>
+CallDecl ref;
+ref.<A_1,..., A_k>genericMethod(a_1,..., a_m);
+CallDecl.<A_1,..., A_k>genericMethod(a_1,..., a_m);
+The following method calls can only occur in a non-static context of the class CallDecl:
 
-The type of the reference s0 is Node<Number>, where Type is Number. The actual type parameter for each method call is determined to be Number. Thus the type of the parameter in the setData() method and the return value of the getData() method is Number. Therefore, we can pass the reference value of a Number or a subclass object of Number to the setData() method, and can assign the reference value returned by the getData() method to a reference of the type Number or a supertype of Number. In this case, we can put a Number, and get a Number.
+Click here to view code image
 
-Table 11.3 gives a summary of using parameterized references for set and get operations on a container. Here are some general guidelines for choosing a wildcard parameterized type:
+this.<A_1,..., A_k>genericMethod(a_1,..., a_m);            // Non-static context
+super.<A_1,..., A_k>genericMethod(a_1,..., a_m);           // Non-static context
+CallDecl.super.<A_1,..., A_k>genericMethod(a_1,..., a_m);  // Non-static context
+Another difference from calling non-generic methods is that, if the type witness is explicitly specified, the syntax of a generic static method call requires an explicit reference or the raw type. When the type witness is not explicitly specified, the syntax of a generic method call is similar to that of a non-generic method call.
 
-If we only want to get an element of type E from a container, we can use the upper bounded wildcard ? extends E for the reference.
+Click here to view code image
 
-If we only want to put an element of type E into a container, we can use the lower bounded wildcard ? super E for the reference.
+<A_1,..., A_k>genericMethod(a_1,..., a_m);     // Compile-time error!
+genericMethod(a_1,..., a_m);                   // Ok.
+Here are some examples of calls to the containsV2() method at (2) in the class Utilities in Example 11.9, where the type witness is specified. We can see from the method signature and the method call signature that the method can be applied to the arguments at (1), (2), and (3), but not at (4). At (5), we must specify a reference or the class name because a type witness with the actual type parameter is specified.
 
-If we want to both get and set elements of type E in a container, we can use the unbounded type E for the reference.
+Click here to view code image
 
-The following acronym might help to remember which parameterized references should be used to invoke get and set methods of a container: GESS (Get-extends-Set-super), meaning for a get method use reference of type <? extends T> and for a set method use reference of type <? super T>.
+Integer[] intArray = {10, 20, 30};
 
-Table 11.3 Summary of Get and Set Operations Using Parameterized References
-Type of s0
-Node
-Node<?>
-Node<? extends Number>
-Node<? super Number>
-Node<Number>
-Operation
-set/put/write
-Any object
-Cannot put anythig except nulls.
-Cannot put anything except nulls.
-Number or subtype
-Number or subtype
-get/read
-Object only
-Object only
-Number
-Object only
-Number
+boolean f1 = Utilities.<Integer>containsV2(20, intArray);           // (1) true
+// E is Integer.
+// Method signature:      containsV2(Integer, Integer[])
+// Method call signature: containsV2(Integer, Integer[])
+
+boolean f2 = Utilities.<Number>containsV2(30.5, intArray);          // (2) false
+// E is Number.
+// Method signature:      containsV2(Number, Number[])
+// Method call signature: containsV2(Double, Integer[])
+
+boolean f3 = Utilities.<Comparable<Integer>> containsV2(20, intArray); // (3) true
+// E is Comparable<Integer>.
+// Method signature:      containsV2(Comparable<Integer>, Comparable<Integer>[])
+// Method call signature: containsV2(Integer,             Integer[])
+
+boolean f4 = Utilities.<Integer>containsV2(30.5, intArray);         // (4) Error!
+// E is Integer.
+// Method signature:      containsV2(Integer, Integer[])
+// Method call signature: containsV2(Double,  Integer[])
+
+// Requires explicit reference or raw type.
+boolean f5 = <Integer>containsV2(20, intArray);              // (5) Syntax error!
+Here are some examples of method calls where the compiler infers the actual type parameters from the method call. At (6), both the key and the element type are Integer, the compiler infers that the actual type parameter is Integer. At (7), where the key type is Double and the element type is Integer, the compiler infers the actual type parameter to be Number—that is, the first common supertype of Double and Integer. At (8), the compiler infers the actual type parameter to be Serializable— that is, the first common supertype of String and Integer. In all the cases below, the method is applicable to the arguments.
+
+Click here to view code image
+
+boolean f6 = Utilities.containsV2(20, intArray);                    // (6) true
+// E is inferred to be Integer.
+// Method signature:      containsV2(Integer, Integer[])
+// Method call signature: containsV2(Integer, Integer[])
+
+boolean f7 = Utilities.containsV2(30.5, intArray);                  // (7) false;
+// E is inferred to be Number.
+// Method signature:      containsV2(Number, Number[])
+// Method call signature: containsV2(Double, Integer[])
+
+boolean f8 = Utilities.containsV2("Hi", intArray);                  // (8) false;
+// E is inferred to be Serializable.
+// Method signature:      containsV2(Serializable, Serializable[])
+// Method call signature: containsV2(String, Integer[])
+At (8), if we had specified the actual type parameter explicitly to be Integer, the compiler would flag an error, as shown at (9), since the method signature is not applicable to the arguments:
+
+Click here to view code image
+
+boolean f9 = Utilities.<Integer>containsV2("Hi", intArray);         // (9) Error!
+// E is Integer.
+// Method signature:      containsV2(Integer, Integer[])
+// Method call signature: containsV2(String, Integer[])
+We can explicitly specify the key type to be a subtype of the element type by introducing a new formal parameter and a bound on the key type, as for the method containsV3() at (3) in Example 11.9:
+
+Click here to view code image
+
+static <K extends E, E> boolean containsV3(K key, E[] array) {
+  // ...
+}
+The following calls at (10) and (11) illustrates inferring of actual type parameters from the method call when no type witness is specified. At (10), the compiler infers the K type parameter to be Double and the type parameter E to be Number—that is, the first common supertype of Double and the array element type Integer. The constraint is satisfied and the method signature is applicable to the arguments.
+
+Click here to view code image
+
+boolean f10 = Utilities.containsV3(30.5, intArray);                 // (10) false
+// K is inferred to be Double. E is inferred to be Number.
+// The constraint (K extends E) is satisfied.
+// Method signature:      containsV3(Double, Number[])
+// Method call signature: containsV2(Double, Integer[])
+
+boolean f11 = Utilities.containsV3("Hi", intArray);                 // (11) false
+// K is inferred to be String. E is inferred to be Serializable.
+// The constraint (K extends E) is satisfied.
+// Method signature:      containsV3(String, Serializable[])
+// Method call signature: containsV2(String, Integer[])
+At (11), the compiler infers the K type parameter to be String and the type parameter E to be Serializable—that is, the first common supertype of String and the array element type Integer. The constraint is satisfied and the method signature is applicable to the arguments, as both String and Integer are Serializable.
+
+The examples below illustrate how constraints come into play in method calls. At (12), the constraint is satisfied and the method signature is applicable to the arguments. At (13), the constraint is not satisfied; therefore, the call is rejected. At (14), the constraint is satisfied, but the method signature is not applicable to the arguments. The call at (15) is rejected because the number of actual type parameters specified in the call is incorrect.
+
+Click here to view code image
+
+boolean f12 = Utilities.<Number, Number>containsV3(30.0, intArray); // (12) false
+// K is Number. E is Number.
+// The constraint (K extends E) is satisfied.
+// Method signature:      containsV3(Number, Number[])
+// Method call signature: containsV3(Double, Integer[])
+
+boolean f13 = Utilities.<Number, Integer>
+                        containsV3(30.5, intArray);                 // (13) Error!
+// K is Number. E is Integer.
+// The constraint (K extends E) is not satisfied.
+
+boolean f14 = Utilities.<Integer, Number>
+                        containsV3(30.5, intArray);                 // (14) Error!
+// K is Integer. E is Number.
+// The constraint (K extends E) is satisfied.
+// Method signature:      containsV3(Integer, Number[])
+// Method call signature: containsV3(Double, Integer[])
+
+boolean f15 = Utilities.<Number>containsV3(30.5, intArray);         // (15) Error!
+// Incorrect no. of type parameters.
+Typically, the dependencies among the parameters of a method and its return type are expressed by formal type parameters. Here are some examples:
+
+Click here to view code image
+
+ public static <K,V> Map<V,List<K>> toMultiMap(Map<K,V> origMap) { ... } // (16)
+ public static <N> Set<N> findVerticesOnPath(Map<N,Collection<N>> graph,
+                                             N startVertex)      { ... } // (17)
+The method header at (16) expresses the dependency that the map returned by the method has the values of the original map as keys, and its values are lists of keys of the original map—that is, the method creates a multimap. In the method header at (17), the type parameter N specifies the element type of the set of vertices to be returned, the type of the keys in the map, the element type of the collections that are values of the map, and the type of the start vertex.

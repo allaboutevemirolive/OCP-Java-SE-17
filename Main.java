@@ -8,7 +8,7 @@ import java.util.Deque;
 public class Main {
     public static void main(String[] args) {
         String inputFile = "input.txt";
-        String outputFile = "11.5 Using References of Wildcard Parameterized Types.md";
+        String outputFile = "11.7 Generic Methods and Constructors.md";
         String textToBeReplaced = "Click here to view code image";
         outputFile = formatOutputFileName(outputFile);
 
@@ -82,6 +82,10 @@ public class Main {
                         }
                     }
 
+                // } else if (c ==  '<') {
+                //     newText.append('_');
+                // } else if ( c == '>') {
+                //     newText.append('_');
                 } else {
                     newText.append(c);
                 }

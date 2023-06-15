@@ -1,0 +1,3 @@
+corroborate
+
+membenarkan, menguatkan|
